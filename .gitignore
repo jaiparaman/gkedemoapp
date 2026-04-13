@@ -1,0 +1,46 @@
+# Node dependencies
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# Build and coverage output
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Runtime files
+*.pid
+*.pid.lock
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Docker
+.docker/
+
+# Terraform (if used later)
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Kubernetes local render/output
+out/
+
+# Google Cloud local config/cache
+.gcloud/

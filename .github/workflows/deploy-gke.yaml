@@ -1,0 +1,65 @@
+name: Build and Deploy to GKE
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ vars.GCP_REGION }}
+  GKE_CLUSTER: ${{ vars.GKE_CLUSTER }}
+  ARTIFACT_REPO: ${{ vars.ARTIFACT_REPO }}
+  IMAGE_NAME: gke-demo-webapp
+  K8S_NAMESPACE: gke-demo
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker auth for Artifact Registry
+        run: gcloud auth configure-docker $GCP_REGION-docker.pkg.dev --quiet
+
+      - name: Get GKE credentials
+        run: gcloud container clusters get-credentials $GKE_CLUSTER --region $GCP_REGION --project $GCP_PROJECT_ID
+
+      - name: Build and push image
+        run: |
+          IMAGE_URI="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$ARTIFACT_REPO/$IMAGE_NAME:${GITHUB_SHA}"
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+          docker build -t "$IMAGE_URI" .
+          docker push "$IMAGE_URI"
+
+      - name: Render deployment manifest with image
+        run: |
+          mkdir -p out
+          sed "s|IMAGE_PLACEHOLDER|$IMAGE_URI|g" k8s/deployment.yaml > out/deployment.yaml
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f out/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+
+      - name: Wait for rollout
+        run: kubectl -n $K8S_NAMESPACE rollout status deployment/gke-demo-app --timeout=180s
+
+      - name: Show service status
+        run: kubectl -n $K8S_NAMESPACE get svc gke-demo-svc

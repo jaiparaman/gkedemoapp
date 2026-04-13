@@ -1,0 +1,12 @@
+{
+  "name": "gke-demo-webapp",
+  "version": "1.0.0",
+  "description": "Small webapp for learning GKE",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
