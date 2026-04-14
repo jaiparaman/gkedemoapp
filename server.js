@@ -4,7 +4,7 @@ const app = express();
 const port = process.env.PORT || 8080;
 
 app.get('/', (req, res) => {
-  res.send('Hello from GKE demo app (no DB yet)!');
+  res.send('Hello from GKE demo app (no DB yet)!!');
 });
 
 app.get('/healthz', (req, res) => {
