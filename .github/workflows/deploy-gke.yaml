@@ -49,6 +49,8 @@ jobs:
 
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: gke-gcloud-auth-plugin
 
       - name: Configure Docker auth for Artifact Registry
         run: gcloud auth configure-docker ${GCP_REGION}-docker.pkg.dev --quiet
