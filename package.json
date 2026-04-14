@@ -4,9 +4,11 @@
   "description": "Small webapp for learning GKE",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "db:check": "node check-db.js"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "mysql2": "^3.22.0"
   }
 }

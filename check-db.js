@@ -1,8 +1,4 @@
-const express = require('express');
 const mysql = require('mysql2/promise');
-
-const app = express();
-const port = process.env.PORT || 8080;
 
 function getDbConfig() {
   const socketPath = process.env.DB_SOCKET_PATH;
@@ -39,46 +35,28 @@ function getMissingDbVars() {
   return required.filter((key) => !process.env[key]);
 }
 
-app.get('/', (req, res) => {
-  res.send('Hello from GKE demo app (no DB yet)!!');
-});
-
-app.get('/healthz', (req, res) => {
-  res.status(200).json({ status: 'ok' });
-});
-
-app.get('/db-check', async (req, res) => {
+async function run() {
   const missingVars = getMissingDbVars();
   if (missingVars.length > 0) {
-    return res.status(400).json({
-      status: 'error',
-      message: 'Missing required database environment variables.',
-      missingVars
-    });
+    console.error('Missing required env vars:', missingVars.join(', '));
+    process.exit(1);
   }
 
   let connection;
   try {
     connection = await mysql.createConnection(getDbConfig());
     const [rows] = await connection.query('SELECT 1 AS ok, NOW() AS serverTime');
-    return res.status(200).json({
-      status: 'ok',
-      result: rows[0]
-    });
+    console.log('MySQL connection successful. Result:', rows[0]);
   } catch (error) {
-    return res.status(500).json({
-      status: 'error',
-      message: 'Failed to connect to MySQL.',
-      code: error.code || 'UNKNOWN',
-      details: error.message
-    });
+    console.error('MySQL connection failed.');
+    console.error('Code:', error.code || 'UNKNOWN');
+    console.error('Details:', error.message);
+    process.exit(1);
   } finally {
     if (connection) {
       await connection.end();
     }
   }
-});
+}
 
-app.listen(port, () => {
-  console.log(`App listening on port ${port}`);
-});
+run();

@@ -41,6 +41,29 @@ jobs:
             exit 1
           fi
 
+      - name: Validate required secrets
+        env:
+          WIF_PROVIDER: ${{ secrets.WIF_PROVIDER }}
+          WIF_SERVICE_ACCOUNT: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          DB_INSTANCE_CONNECTION_NAME: ${{ secrets.DB_INSTANCE_CONNECTION_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+        run: |
+          missing=0
+          for sec in WIF_PROVIDER WIF_SERVICE_ACCOUNT DB_INSTANCE_CONNECTION_NAME DB_USER DB_PASSWORD DB_NAME; do
+            if [ -z "${!sec}" ]; then
+              echo "ERROR: Repository secret '$sec' is not set."
+              missing=1
+            fi
+          done
+          if [ $missing -eq 1 ]; then
+            echo ""
+            echo "Fix: Go to GitHub repo -> Settings -> Secrets and variables -> Actions -> Secrets"
+            echo "Add: WIF_PROVIDER, WIF_SERVICE_ACCOUNT, DB_INSTANCE_CONNECTION_NAME, DB_USER, DB_PASSWORD, DB_NAME"
+            exit 1
+          fi
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -69,6 +92,15 @@ jobs:
         run: |
           mkdir -p out
           sed "s|IMAGE_PLACEHOLDER|$IMAGE_URI|g" k8s/deployment.yaml > out/deployment.yaml
+
+      - name: Create or update DB secret in cluster
+        run: |
+          kubectl -n ${K8S_NAMESPACE} create secret generic gke-demo-db-secret \
+            --from-literal=instance_connection_name='${{ secrets.DB_INSTANCE_CONNECTION_NAME }}' \
+            --from-literal=db_user='${{ secrets.DB_USER }}' \
+            --from-literal=db_password='${{ secrets.DB_PASSWORD }}' \
+            --from-literal=db_name='${{ secrets.DB_NAME }}' \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Apply Kubernetes manifests
         run: |
